@@ -2,8 +2,7 @@ import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
-// A realistic JSON Schema — required by the assignment to demonstrate
-// dynamic, configuration-driven validation (not hardcoded if/else).
+// A JSON Schema example 
 const contactFormSchema = {
   $schema: 'http://json-schema.org/draft-07/schema#',
   type: 'object',

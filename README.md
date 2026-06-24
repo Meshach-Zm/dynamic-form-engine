@@ -45,14 +45,14 @@ Visit [http://localhost:3000](http://localhost:3000)
 
 ## API Endpoints
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/forms` | List all form templates |
-| POST | `/api/forms` | Create a new form template |
-| GET | `/api/forms/:id` | Get a form template with its latest version |
-| POST | `/api/forms/:id/versions` | Publish a new version of a form |
-| POST | `/api/forms/version/:versionId/submissions` | Submit a form response |
-| GET | `/api/forms/version/:versionId/submissions` | List submissions for a version |
+| Method | Path                                        | Description                                 |
+| ------ | ------------------------------------------- | ------------------------------------------- |
+| GET    | `/api/forms`                                | List all form templates                     |
+| POST   | `/api/forms`                                | Create a new form template                  |
+| GET    | `/api/forms/:id`                            | Get a form template with its latest version |
+| POST   | `/api/forms/:id/versions`                   | Publish a new version of a form             |
+| POST   | `/api/forms/version/:versionId/submissions` | Submit a form response                      |
+| GET    | `/api/forms/version/:versionId/submissions` | List submissions for a version              |
 
 ---
 
@@ -79,10 +79,10 @@ FormTemplate
 
 ## Validation Strategy
 
-| Concern | Tool | Why |
-|---------|------|-----|
+| Concern                                                        | Tool              | Why                                                                                    |
+| -------------------------------------------------------------- | ----------------- | -------------------------------------------------------------------------------------- |
 | Dynamic payload validation (user submissions vs stored schema) | AJV + JSON Schema | Purpose-built for this; fast; supports full draft-07 including formats, enums, min/max |
-| Static API request shape validation | Zod | TypeScript-first; infers types; clean error messages |
+| Static API request shape validation                            | Zod               | TypeScript-first; infers types; clean error messages                                   |
 
 These two tools have a hard boundary — they are never used for each other's job.
 

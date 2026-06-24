@@ -3,10 +3,10 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
-
 // A named form (e.g. "Volunteer Registration Form").
 // A form can have many versions; only one is "latest" at a time.
 model FormTemplate {

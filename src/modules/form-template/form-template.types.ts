@@ -1,11 +1,8 @@
 import { z } from 'zod'
 
-// Static validation (Zod) — shape of incoming API requests.
-// This is NOT the dynamic form schema; that lives in the database as JSON Schema.
-
 export const CreateFormTemplateSchema = z.object({
   name: z.string().min(1).max(200),
-  schema: z.record(z.unknown()), // raw JSON Schema object
+  schema: z.record(z.unknown()),
 })
 
 export const CreateFormVersionSchema = z.object({

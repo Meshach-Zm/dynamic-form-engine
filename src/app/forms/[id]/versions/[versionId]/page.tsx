@@ -16,8 +16,9 @@ async function getVersion(versionId: string): Promise<FormVersion | null> {
   return (await res.json()).data
 }
 
-export default async function FormPage({ params }: { params: { versionId: string } }) {
-  const version = await getVersion(params.versionId)
+export default async function FormPage({ params }: { params: Promise<{ versionId: string }> }) {
+  const { versionId } = await params
+  const version = await getVersion(versionId)
   if (!version) notFound()
 
   return (

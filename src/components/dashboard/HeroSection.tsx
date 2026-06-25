@@ -35,7 +35,7 @@ export function HeroSection() {
                     </Link>
 
                     <Link
-                        href={{ pathname: '/submissions' }}
+                        href={{ pathname: '/forms' }}
                         className="border border-black/10 bg-white px-8 py-4 text-sm font-semibold transition hover:border-black"
                     >
                         View submissions

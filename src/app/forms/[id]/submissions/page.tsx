@@ -8,63 +8,164 @@ interface Submission {
     createdAt: string
 }
 
-interface VersionWithTemplate {
+interface FormTemplate {
     id: string
-    versionNumber: number
-    formTemplate: { id: string; name: string }
+    name: string
+    latestVersion: {
+        id: string
+        versionNumber: number
+    } | null
 }
 
-async function getData(versionId: string) {
-    const base = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'
-    const [vRes, sRes] = await Promise.all([
-        fetch(`${base}/api/forms/version/${versionId}`, { cache: 'no-store' }),
-        fetch(`${base}/api/forms/version/${versionId}/submissions`, { cache: 'no-store' }),
-    ])
-    if (!vRes.ok) return null
-    const version: VersionWithTemplate = (await vRes.json()).data
-    const submissions: Submission[] = sRes.ok ? (await sRes.json()).data : []
-    return { version, submissions }
+async function getData(formId: string) {
+    const base =
+        process.env.NEXT_PUBLIC_BASE_URL ??
+        'http://localhost:3000'
+
+    const formRes = await fetch(
+        `${base}/api/forms/${formId}`,
+        {
+            cache: 'no-store',
+        },
+    )
+
+    if (!formRes.ok) return null
+
+    const form: FormTemplate =
+        (await formRes.json()).data
+
+    if (!form.latestVersion) {
+        return {
+            form,
+            version: null,
+            submissions: [],
+        }
+    }
+
+    const submissionsRes = await fetch(
+        `${base}/api/forms/version/${form.latestVersion.id}/submissions`,
+        {
+            cache: 'no-store',
+        },
+    )
+
+    const submissions: Submission[] =
+        submissionsRes.ok
+            ? (await submissionsRes.json()).data
+            : []
+
+    return {
+        form,
+        version: form.latestVersion,
+        submissions,
+    }
 }
 
-export default async function SubmissionsPage({ params }: { params: Promise<{ versionId: string }> }) {
-    const { versionId } = await params
-    const data = await getData(versionId)
+export default async function SubmissionsPage({
+    params,
+}: {
+    params: Promise<{ id: string }>
+}) {
+    const { id } = await params
+
+    const data = await getData(id)
+
     if (!data) notFound()
-    const { version, submissions } = data
+
+    const {
+        form,
+        version,
+        submissions,
+    } = data
 
     return (
-        <main className="page">
-            <div className="page-header">
-                <div>
-                    <h1>Submissions</h1>
-                    <p className="page-sub">{version.formTemplate.name} · v{version.versionNumber}</p>
-                </div>
-                <Link href={`/forms/${version.formTemplate.id}` as Route} className="btn btn--ghost btn--sm">
-                    View form
-                </Link>
-            </div>
+        <main className="mx-auto max-w-7xl px-6 py-10">
+            <header className="border-b border-black/10 pb-8">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-500">
+                            Submissions
+                        </p>
 
-            {submissions.length === 0 ? (
-                <p className="empty">No submissions yet.</p>
+                        <h1 className="mt-3 text-3xl font-black uppercase leading-[0.95] tracking-[0.08em] md:text-4xl">
+                            {form.name}
+                        </h1>
+
+                        {version && (
+                            <p className="mt-3 text-sm text-neutral-600">
+                                Version {version.versionNumber}
+                            </p>
+                        )}
+                    </div>
+
+                    <div className="flex gap-2">
+                        <Link
+                            href="/"
+                            className="border border-black/10 px-4 py-3 text-sm font-medium transition hover:border-black"
+                        >
+                            Home
+                        </Link>
+
+                        <Link
+                            href={`/forms/${form.id}/fill` as Route}
+                            className="border border-black/10 px-4 py-3 text-sm font-medium transition hover:border-black"
+                        >
+                            View Form
+                        </Link>
+                    </div>
+                </div>
+            </header>
+
+            {!version ? (
+                <div className="mt-8 border border-black/10 bg-white p-8 text-center">
+                    <p className="text-neutral-600">
+                        This form has no published version.
+                    </p>
+                </div>
+            ) : submissions.length === 0 ? (
+                <div className="mt-8 border border-black/10 bg-white p-8 text-center">
+                    <p className="text-neutral-600">
+                        No submissions yet.
+                    </p>
+                </div>
             ) : (
-                <div className="submission-list">
-                    {submissions.map((s) => (
-                        <div key={s.id} className="submission-card">
-                            <div className="submission-card__meta">
-                                <span className="submission-card__id">{s.id.slice(-8)}</span>
-                                <span className="submission-card__date">
-                                    {new Date(s.createdAt).toLocaleString()}
+                <div className="mt-8 space-y-4">
+                    {submissions.map(submission => (
+                        <article
+                            key={submission.id}
+                            className="border border-black/10 bg-white p-6"
+                        >
+                            <div className="mb-6 flex flex-col gap-2 border-b border-black/10 pb-4 md:flex-row md:items-center md:justify-between">
+                                <span className="w-fit border border-black/10 px-2 py-1 font-mono text-xs">
+                                    {submission.id.slice(-8)}
+                                </span>
+
+                                <span className="text-xs text-neutral-500">
+                                    {new Date(
+                                        submission.createdAt,
+                                    ).toLocaleString()}
                                 </span>
                             </div>
-                            <dl className="payload">
-                                {Object.entries(s.payload).map(([k, v]) => (
-                                    <div key={k} className="payload__row">
-                                        <dt className="payload__key">{k}</dt>
-                                        <dd className="payload__val">{String(v)}</dd>
+
+                            <dl className="space-y-3">
+                                {Object.entries(
+                                    submission.payload,
+                                ).map(([key, value]) => (
+                                    <div
+                                        key={key}
+                                        className="grid gap-1 md:grid-cols-[180px_1fr]"
+                                    >
+                                        <dt className="text-xs font-semibold uppercase tracking-[0.08em] text-neutral-500">
+                                            {key}
+                                        </dt>
+
+                                        <dd className="break-words text-sm">
+                                            {String(value)}
+                                        </dd>
                                     </div>
                                 ))}
                             </dl>
-                        </div>
+                        </article>
                     ))}
                 </div>
             )}

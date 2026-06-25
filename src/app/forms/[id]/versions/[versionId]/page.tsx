@@ -6,7 +6,7 @@ interface FormVersion {
   id: string
   versionNumber: number
   schema: Record<string, unknown>
-  formTemplate: { name: string }
+  formTemplate: { id: string; name: string }
 }
 
 async function getVersion(versionId: string): Promise<FormVersion | null> {
@@ -16,19 +16,42 @@ async function getVersion(versionId: string): Promise<FormVersion | null> {
   return (await res.json()).data
 }
 
-export default async function FormPage({ params }: { params: Promise<{ versionId: string }> }) {
+export default async function FormPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ versionId: string }>
+  searchParams: Promise<{ mode?: string }>
+}) {
   const { versionId } = await params
+  const { mode } = await searchParams
+  const readOnly = mode === 'view'
+
   const version = await getVersion(versionId)
   if (!version) notFound()
 
   return (
     <main className="page page--narrow">
       <div className="page-header">
-        <p className="page-sub">v{version.versionNumber}</p>
-        <Link href={`/forms/${version.id}/submissions`} className="btn btn--ghost btn--sm">
-          View submissions
-        </Link>
+        <p className="page-sub">
+          v{version.versionNumber}
+          {readOnly && ' · Read-only'}
+        </p>
+
+        <div className="flex gap-2">
+          <Link href="/" className="btn btn--ghost btn--sm">
+            Home
+          </Link>
+
+          <Link
+            href={`/forms/${version.formTemplate.id}/submissions`}
+            className="btn btn--ghost btn--sm"
+          >
+            View submissions
+          </Link>
+        </div>
       </div>
+
       <FormRenderer
         schema={version.schema as any}
         formVersionId={version.id}

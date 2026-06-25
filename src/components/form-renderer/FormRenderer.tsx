@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 
@@ -49,6 +51,8 @@ export function FormRenderer({
   const [serverErrors, setServerErrors] = useState<
     ValidationError[]
   >([])
+  const router = useRouter()
+
 
   const {
     register,
@@ -111,6 +115,7 @@ export function FormRenderer({
 
   const required = schema.required ?? []
   const fields = Object.entries(schema.properties)
+
 
   return (
     <section className="border border-black/10 bg-white p-8 md:p-10">
@@ -333,12 +338,25 @@ export function FormRenderer({
           )
         })}
 
-        <div className="border-t border-black/10 pt-8">
+        <div className="flex flex-wrap items-center gap-3 border-t border-black/10 pt-8">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="border border-black/10 px-6 py-4 text-sm font-medium transition hover:border-black"
+          >
+            Back
+          </button>
+
+          <Link
+            href="/"
+            className="border border-black/10 px-6 py-4 text-sm font-medium transition hover:border-black"
+          >
+            Home
+          </Link>
+
           <button
             type="submit"
-            disabled={
-              status === 'loading'
-            }
+            disabled={status === 'loading'}
             className="bg-black px-10 py-4 text-sm font-semibold text-white disabled:bg-neutral-200 disabled:text-neutral-500"
           >
             {status === 'loading'

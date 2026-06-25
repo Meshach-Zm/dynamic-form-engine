@@ -5,6 +5,7 @@ function relativeTime(timestamp: string): string {
         (Date.now() - new Date(timestamp).getTime()) / 60_000,
     )
 
+    if (mins < 1) return 'just now'
     if (mins < 60) return `${mins}m ago`
 
     const hrs = Math.floor(mins / 60)
@@ -63,7 +64,7 @@ export function ActivityFeed({ items }: Props) {
                 </p>
 
                 <h2 className="mt-2 text-lg font-semibold">
-                    Today
+                    Recent Activity
                 </h2>
             </div>
 

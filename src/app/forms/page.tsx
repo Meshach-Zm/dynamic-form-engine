@@ -45,17 +45,26 @@ export default async function FormsPage() {
             </h1>
           </div>
 
-          <Link
-            href="/forms/new"
-            className="bg-black px-4 py-3 text-sm font-semibold text-white"
-          >
-            + New Form
-          </Link>
+          <div className="flex gap-2">
+            <Link
+              href="/"
+              className="border border-black/10 px-4 py-3 text-sm font-medium transition hover:border-black"
+            >
+              Home
+            </Link>
+
+            <Link
+              href="/forms/new"
+              className="bg-black px-4 py-3 text-sm font-semibold text-white"
+            >
+              + New Form
+            </Link>
+          </div>
         </div>
       </header>
 
       {forms.length === 0 ? (
-        <div className="border border-black/10 bg-white p-8 text-center mt-8">
+        <div className="mt-8 border border-black/10 bg-white p-8 text-center">
           <p className="text-neutral-600">
             No forms yet.
           </p>
@@ -96,7 +105,7 @@ export default async function FormsPage() {
 
                     <p className="mt-1 text-sm text-neutral-600">
                       {latest
-                        ? `v${latest.versionNumber}`
+                        ? `Latest Version: v${latest.versionNumber}`
                         : 'No versions'}
                       {' · '}
                       {new Date(
@@ -105,23 +114,32 @@ export default async function FormsPage() {
                     </p>
                   </div>
 
-                  {latest && (
-                    <div className="flex flex-wrap gap-2">
-                      <Link
-                        href={`/forms/${latest.id}` as Route}
-                        className="bg-black px-4 py-2 text-sm font-semibold text-white"
-                      >
-                        Fill Form
-                      </Link>
+                  <div className="flex flex-wrap gap-2">
+                    <Link
+                      href={`/forms/${form.id}` as Route}
+                      className="border border-black/10 px-4 py-2 text-sm font-medium transition hover:border-black"
+                    >
+                      Manage
+                    </Link>
 
-                      <Link
-                        href={`/forms/${latest.id}/submissions` as Route}
-                        className="border border-black/10 px-4 py-2 text-sm font-medium transition hover:border-black"
-                      >
-                        Submissions
-                      </Link>
-                    </div>
-                  )}
+                    {latest && (
+                      <>
+                        <Link
+                          href={`/forms/${form.id}/fill` as Route}
+                          className="bg-black px-4 py-2 text-sm font-semibold text-white"
+                        >
+                          Fill Form
+                        </Link>
+
+                        <Link
+                          href={`/forms/${form.id}/submissions` as Route}
+                          className="border border-black/10 px-4 py-2 text-sm font-medium transition hover:border-black"
+                        >
+                          Submissions
+                        </Link>
+                      </>
+                    )}
+                  </div>
                 </div>
               </li>
             )

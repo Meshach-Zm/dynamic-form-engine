@@ -230,4 +230,4 @@ export default function VersionDetailPage() {
             </section>
         </main>
     );
-}
+}export const dynamic = 'force-dynamic';

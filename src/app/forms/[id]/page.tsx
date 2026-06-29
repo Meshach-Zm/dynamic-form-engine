@@ -201,4 +201,4 @@ export default function FormDetailsPage() {
       </section>
     </main>
   );
-}
+}export const dynamic = 'force-dynamic';

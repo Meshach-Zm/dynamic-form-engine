@@ -279,4 +279,4 @@ export default function SubmissionsPage() {
             )}
         </main>
     );
-}
+}export const dynamic = 'force-dynamic';

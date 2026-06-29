@@ -74,6 +74,5 @@
   "main": "index.js",
   "keywords": [],
   "author": "",
-  "license": "ISC",
-  "type": "commonjs"
+  "license": "ISC"
 }

@@ -234,3 +234,4 @@ export default function VersionDetailPage() {
             </section>
         </main>
     );
+}

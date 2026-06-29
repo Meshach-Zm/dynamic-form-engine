@@ -1,17 +1,20 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// components/dashboard/ActivityFeed.tsx  — unchanged from original; kept here
+// for completeness. The ActivityItem type must include id, type, formName,
+// versionNumber, and timestamp, all of which deriveActivity() computes from
+// the FormTemplate[] returned by GET /api/forms.
+// ─────────────────────────────────────────────────────────────────────────────
+
 import type { ActivityItem } from '@/types/form'
 
 function relativeTime(timestamp: string): string {
     const mins = Math.floor(
         (Date.now() - new Date(timestamp).getTime()) / 60_000,
     )
-
     if (mins < 1) return 'just now'
     if (mins < 60) return `${mins}m ago`
-
     const hrs = Math.floor(mins / 60)
-
     if (hrs < 24) return `${hrs}h ago`
-
     return `${Math.floor(hrs / 24)}d ago`
 }
 
@@ -25,25 +28,20 @@ function ActivityRow({ item }: { item: ActivityItem }) {
         ),
         version_published: (
             <>
-                New version published on{' '}
-                <strong>{item.formName}</strong>{' '}
+                New version published on <strong>{item.formName}</strong>{' '}
                 <em>· v{item.versionNumber}</em>
             </>
         ),
         form_created: (
             <>
-                <strong>{item.formName}</strong> created{' '}
-                <em>· draft</em>
+                <strong>{item.formName}</strong> created <em>· draft</em>
             </>
         ),
     }[item.type]
 
     return (
         <div className="grid gap-4 border-t border-black/10 px-5 py-4 md:grid-cols-[1fr_auto] md:items-center">
-            <div className="text-sm">
-                {label}
-            </div>
-
+            <div className="text-sm">{label}</div>
             <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-500">
                 {relativeTime(item.timestamp)}
             </div>
@@ -51,29 +49,25 @@ function ActivityRow({ item }: { item: ActivityItem }) {
     )
 }
 
-interface Props {
+interface ActivityFeedProps {
     items: ActivityItem[]
 }
 
-export function ActivityFeed({ items }: Props) {
+export function ActivityFeed({ items }: ActivityFeedProps) {
     return (
         <section className="border border-black/10 bg-white">
             <div className="border-b border-black/10 px-5 py-5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-500">
                     Activity
                 </p>
-
-                <h2 className="mt-2 text-lg font-semibold">
-                    Recent Activity
-                </h2>
+                <h2 className="mt-2 text-lg font-semibold">Recent Activity</h2>
             </div>
 
-            {items.map(item => (
-                <ActivityRow
-                    key={item.id}
-                    item={item}
-                />
-            ))}
+            {items.length === 0 ? (
+                <p className="px-5 py-8 text-sm text-neutral-500">No recent activity.</p>
+            ) : (
+                items.map(item => <ActivityRow key={item.id} item={item} />)
+            )}
         </section>
     )
 }

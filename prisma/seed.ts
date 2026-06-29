@@ -1,79 +1,147 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
+import dotenv from 'dotenv';
+import path from 'path';
 
-const prisma = new PrismaClient()
+// Load environment variables
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
-// A JSON Schema example 
+const connectionString = process.env.DATABASE_URL || process.env.DIRECT_URL;
+
+if (!connectionString) {
+  console.error('❌ DATABASE_URL or DIRECT_URL is not set');
+  process.exit(1);
+}
+
+console.log('🔍 Connecting to database...');
+
+// Create a Pool instance
+const pool = new Pool({
+  connectionString,
+});
+
+// Create the Prisma adapter for PostgreSQL
+const adapter = new PrismaPg(pool);
+
+// Create Prisma client with the adapter
+const prisma = new PrismaClient({ adapter });
+
 const contactFormSchema = {
-  $schema: 'http://json-schema.org/draft-07/schema#',
-  type: 'object',
-  required: ['fullName', 'email', 'age', 'country', 'message'],
+  type: "object",
+  required: ["fullName", "email", "age", "country", "message"],
   additionalProperties: false,
   properties: {
     fullName: {
-      type: 'string',
+      type: "string",
       minLength: 2,
       maxLength: 100,
-      description: 'Full name',
+      description: "Full Name"
     },
     email: {
-      type: 'string',
-      format: 'email',
-      description: 'Email address',
+      type: "string",
+      format: "email",
+      description: "Email Address"
     },
     age: {
-      type: 'integer',
+      type: "integer",
       minimum: 18,
       maximum: 120,
-      description: 'Age (must be 18 or older)',
+      description: "Age"
     },
     country: {
-      type: 'string',
-      enum: ['ZM', 'ZW', 'KE', 'UG', 'TZ', 'RW', 'MW', 'MZ', 'NG', 'GH', 'OTHER'],
-      description: 'Country of residence',
+      type: "string",
+      enum: ["ZM", "ZW", "KE", "UG", "TZ", "RW", "MW", "MZ", "NG", "GH", "OTHER"],
+      description: "Country"
     },
     message: {
-      type: 'string',
+      type: "string",
       minLength: 10,
       maxLength: 2000,
-      description: 'Your message',
+      description: "Message"
     },
     subscribe: {
-      type: 'boolean',
-      description: 'Subscribe to newsletter (optional)',
+      type: "boolean",
+      description: "Subscribe to newsletter"
     },
   },
-}
+};
+
+const volunteerFormSchema = {
+  type: "object",
+  required: ["fullName", "email", "availability"],
+  additionalProperties: false,
+  properties: {
+    fullName: {
+      type: "string",
+      minLength: 2,
+      maxLength: 100,
+      description: "Full Name"
+    },
+    email: {
+      type: "string",
+      format: "email",
+      description: "Email Address"
+    },
+    availability: {
+      type: "string",
+      enum: ["Weekdays", "Weekends", "Both"],
+      description: "Availability"
+    },
+    experience: {
+      type: "string",
+      maxLength: 500,
+      description: "Experience"
+    },
+  },
+};
 
 async function main() {
-  console.log('Seeding database...')
+  console.log('🌱 Seeding database...');
 
-  // Upsert so running seed twice is safe
-  const template = await prisma.formTemplate.upsert({
-    where: { id: 'seed-template-001' },
-    update: {},
-    create: {
-      id: 'seed-template-001',
-      name: 'Contact & Enquiry Form',
+  // Clean up existing data
+  await prisma.submission.deleteMany({});
+  await prisma.formVersion.deleteMany({});
+  await prisma.formTemplate.deleteMany({});
+
+  console.log('📝 Creating forms...');
+
+  const contact = await prisma.formTemplate.create({
+    data: {
+      name: "Contact & Enquiry Form",
       versions: {
         create: {
-          id: 'seed-version-001',
           versionNumber: 1,
           schema: contactFormSchema,
           isLatest: true,
         },
       },
     },
-  })
+  });
 
-  console.log(`Template created: ${template.name} (${template.id})`)
-  console.log('Seed complete.')
+  const volunteer = await prisma.formTemplate.create({
+    data: {
+      name: "Volunteer Registration",
+      versions: {
+        create: {
+          versionNumber: 1,
+          schema: volunteerFormSchema,
+          isLatest: true,
+        },
+      },
+    },
+  });
+
+  console.log('✅ Created:', contact.name);
+  console.log('✅ Created:', volunteer.name);
+  console.log('✅ Seed complete!');
 }
 
 main()
-  .catch((e) => {
-    console.error(e)
-    process.exit(1)
+  .catch((error) => {
+    console.error('❌ Seed error:', error);
+    process.exit(1);
   })
   .finally(async () => {
-    await prisma.$disconnect()
-  })
+    await prisma.$disconnect();
+  });

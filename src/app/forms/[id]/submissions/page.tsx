@@ -1,174 +1,282 @@
-import { notFound } from 'next/navigation'
-import Link from 'next/link'
-import type { Route } from 'next'
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { LoadingPage } from '@/components/ui/LoadingSpinner';
+import { Pagination } from '@/components/ui/Pagination';
+import { formatDateTime } from '@/lib/date';
 
 interface Submission {
-    id: string
-    payload: Record<string, unknown>
-    createdAt: string
+    id: string;
+    payload: any;
+    files?: any;
+    createdAt: string;
+    version: {
+        versionNumber: number;
+        isLatest: boolean;
+    };
 }
 
-interface FormTemplate {
-    id: string
-    name: string
-    latestVersion: {
-        id: string
-        versionNumber: number
-    } | null
+interface PaginationData {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
 }
 
-async function getData(formId: string) {
-    const base =
-        process.env.NEXT_PUBLIC_BASE_URL ??
-        'http://localhost:3000'
+export default function SubmissionsPage() {
+    const params = useParams<{ id: string }>();
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const formId = params.id;
+    const currentPage = parseInt(searchParams.get('page') || '1');
 
-    const formRes = await fetch(
-        `${base}/api/forms/${formId}`,
-        {
-            cache: 'no-store',
-        },
-    )
+    const [form, setForm] = useState<any>(null);
+    const [submissions, setSubmissions] = useState<Submission[]>([]);
+    const [pagination, setPagination] = useState<PaginationData | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    if (!formRes.ok) return null
+    useEffect(() => {
+        async function fetchSubmissions() {
+            try {
+                // Get form details
+                const formResponse = await fetch(`/api/forms/${formId}`);
+                const formResult = await formResponse.json();
 
-    const form: FormTemplate =
-        (await formRes.json()).data
+                if (!formResult.data) {
+                    setError('Form not found');
+                    return;
+                }
+                setForm(formResult.data);
 
-    if (!form.latestVersion) {
-        return {
-            form,
-            version: null,
-            submissions: [],
+                // Get all submissions with pagination
+                const versionsResponse = await fetch(`/api/forms/${formId}/versions`);
+                const versionsResult = await versionsResponse.json();
+
+                if (!versionsResult.data || versionsResult.data.length === 0) {
+                    setSubmissions([]);
+                    setLoading(false);
+                    return;
+                }
+
+                // Get submissions for each version with pagination
+                const allSubmissions: Submission[] = [];
+                let totalItems = 0;
+                let totalPages = 0;
+                let currentPageNum = currentPage;
+                let hasNext = false;
+                let hasPrev = false;
+
+                for (const version of versionsResult.data) {
+                    const subResponse = await fetch(
+                        `/api/forms/${formId}/versions/${version.id}/submissions?page=${currentPage}&limit=10`
+                    );
+                    const subResult = await subResponse.json();
+
+                    if (subResult.data) {
+                        allSubmissions.push(
+                            ...subResult.data.map((s: any) => ({
+                                ...s,
+                                version: {
+                                    versionNumber: version.versionNumber,
+                                    isLatest: version.isLatest,
+                                },
+                            }))
+                        );
+                    }
+
+                    if (subResult.pagination) {
+                        totalItems += subResult.pagination.total;
+                        totalPages = Math.max(totalPages, subResult.pagination.totalPages);
+                        currentPageNum = subResult.pagination.page;
+                        hasNext = subResult.pagination.hasNext || hasNext;
+                        hasPrev = subResult.pagination.hasPrev || hasPrev;
+                    }
+                }
+
+                // Sort by newest first
+                allSubmissions.sort(
+                    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                );
+
+                // Apply pagination limit across all
+                const start = (currentPage - 1) * 10;
+                const end = start + 10;
+                const paginatedSubmissions = allSubmissions.slice(start, end);
+
+                setSubmissions(paginatedSubmissions);
+                setPagination({
+                    page: currentPageNum,
+                    limit: 10,
+                    total: totalItems,
+                    totalPages: Math.ceil(totalItems / 10) || 1,
+                    hasNext: paginatedSubmissions.length === 10 && allSubmissions.length > end,
+                    hasPrev: currentPage > 1,
+                });
+            } catch (err) {
+                setError('Failed to load submissions');
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
         }
+
+        fetchSubmissions();
+    }, [formId, currentPage]);
+
+    const handlePageChange = (page: number) => {
+        router.push(`/forms/${formId}/submissions?page=${page}`);
+    };
+
+    if (loading) return <LoadingPage />;
+
+    if (error) {
+        return (
+            <main className="mx-auto max-w-4xl px-6 py-10">
+                <div className="border border-red-200 bg-red-50 p-6 text-red-700">
+                    <p className="font-semibold">Error</p>
+                    <p className="text-sm">{error}</p>
+                    <Link
+                        href={`/forms/${formId}`}
+                        className="mt-4 inline-block text-sm text-red-700 underline"
+                    >
+                        ← Back to form
+                    </Link>
+                </div>
+            </main>
+        );
     }
-
-    const submissionsRes = await fetch(
-        `${base}/api/forms/version/${form.latestVersion.id}/submissions`,
-        {
-            cache: 'no-store',
-        },
-    )
-
-    const submissions: Submission[] =
-        submissionsRes.ok
-            ? (await submissionsRes.json()).data
-            : []
-
-    return {
-        form,
-        version: form.latestVersion,
-        submissions,
-    }
-}
-
-export default async function SubmissionsPage({
-    params,
-}: {
-    params: Promise<{ id: string }>
-}) {
-    const { id } = await params
-
-    const data = await getData(id)
-
-    if (!data) notFound()
-
-    const {
-        form,
-        version,
-        submissions,
-    } = data
 
     return (
-        <main className="mx-auto max-w-7xl px-6 py-10">
-            <header className="border-b border-black/10 pb-8">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-500">
-                            Submissions
-                        </p>
+        <main className="mx-auto max-w-4xl px-6 py-10">
+            <div className="mb-6">
+                <Link
+                    href={`/forms/${formId}`}
+                    className="inline-flex items-center gap-2 text-sm text-neutral-500 hover:text-black"
+                >
+                    <span>←</span> Back to {form?.name || 'Form'}
+                </Link>
+                <h1 className="text-2xl font-bold mt-4">All Submissions</h1>
+                <p className="text-sm text-neutral-500">
+                    {pagination?.total || 0} total submissions
+                </p>
+            </div>
 
-                        <h1 className="mt-3 text-3xl font-black uppercase leading-[0.95] tracking-[0.08em] md:text-4xl">
-                            {form.name}
-                        </h1>
-
-                        {version && (
-                            <p className="mt-3 text-sm text-neutral-600">
-                                Version {version.versionNumber}
-                            </p>
-                        )}
-                    </div>
-
-                    <div className="flex gap-2">
-                        <Link
-                            href="/"
-                            className="border border-black/10 px-4 py-3 text-sm font-medium transition hover:border-black"
-                        >
-                            Home
-                        </Link>
-
-                        <Link
-                            href={`/forms/${form.id}/fill` as Route}
-                            className="border border-black/10 px-4 py-3 text-sm font-medium transition hover:border-black"
-                        >
-                            View Form
-                        </Link>
-                    </div>
-                </div>
-            </header>
-
-            {!version ? (
-                <div className="mt-8 border border-black/10 bg-white p-8 text-center">
-                    <p className="text-neutral-600">
-                        This form has no published version.
-                    </p>
-                </div>
-            ) : submissions.length === 0 ? (
-                <div className="mt-8 border border-black/10 bg-white p-8 text-center">
-                    <p className="text-neutral-600">
-                        No submissions yet.
-                    </p>
+            {submissions.length === 0 ? (
+                <div className="text-center py-12 bg-neutral-50 rounded-lg border border-black/10">
+                    <p className="text-neutral-500">No submissions yet</p>
+                    <Link
+                        href={`/forms/${formId}/fill`}
+                        className="text-black underline text-sm mt-2 inline-block"
+                    >
+                        Fill out this form →
+                    </Link>
                 </div>
             ) : (
-                <div className="mt-8 space-y-4">
-                    {submissions.map(submission => (
-                        <article
-                            key={submission.id}
-                            className="border border-black/10 bg-white p-6"
-                        >
-                            <div className="mb-6 flex flex-col gap-2 border-b border-black/10 pb-4 md:flex-row md:items-center md:justify-between">
-                                <span className="w-fit border border-black/10 px-2 py-1 font-mono text-xs">
-                                    {submission.id.slice(-8)}
-                                </span>
-
-                                <span className="text-xs text-neutral-500">
-                                    {new Date(
-                                        submission.createdAt,
-                                    ).toLocaleString()}
-                                </span>
-                            </div>
-
-                            <dl className="space-y-3">
-                                {Object.entries(
-                                    submission.payload,
-                                ).map(([key, value]) => (
-                                    <div
-                                        key={key}
-                                        className="grid gap-1 md:grid-cols-[180px_1fr]"
-                                    >
-                                        <dt className="text-xs font-semibold uppercase tracking-[0.08em] text-neutral-500">
-                                            {key}
-                                        </dt>
-
-                                        <dd className="break-words text-sm">
-                                            {String(value)}
-                                        </dd>
+                <>
+                    <div className="space-y-4">
+                        {submissions.map((submission) => (
+                            <div key={submission.id} className="border border-black/10 p-4 rounded-lg">
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm text-neutral-500">
+                                            {formatDateTime(submission.createdAt)}
+                                        </span>
+                                        <span className="text-xs bg-neutral-100 px-2 py-0.5 rounded">
+                                            v{submission.version.versionNumber}
+                                            {submission.version.isLatest && ' (Latest)'}
+                                        </span>
                                     </div>
-                                ))}
-                            </dl>
-                        </article>
-                    ))}
-                </div>
+                                    <span className="text-xs text-neutral-400">
+                                        ID: {submission.id.slice(0, 8)}
+                                    </span>
+                                </div>
+
+                                {/* Payload */}
+                                <div className="bg-neutral-50 p-3 rounded overflow-auto mb-3">
+                                    <pre className="text-sm">
+                                        {JSON.stringify(submission.payload, null, 2)}
+                                    </pre>
+                                </div>
+
+                                {/* ✅ Files Section */}
+                                {submission.files && Object.keys(submission.files).length > 0 && (
+                                    <div className="border-t border-black/10 pt-3 mt-2">
+                                        <p className="text-xs font-medium text-neutral-500 mb-2">📎 Attachments</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {Object.entries(submission.files).map(([key, file]: [string, any]) => {
+                                                // Handle array of files (like verificationDocs)
+                                                if (Array.isArray(file)) {
+                                                    return file.map((f: any, index: number) => (
+                                                        <div key={`${key}-${index}`} className="flex items-center gap-1">
+                                                            {/* View link - opens in browser */}
+                                                            <a
+                                                                href={f.viewUrl || f.url}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="flex items-center gap-1 text-xs bg-neutral-100 px-2 py-1 rounded hover:bg-neutral-200 transition"
+                                                            >
+                                                                {f.type?.startsWith('image/') ? '🖼️' : f.type === 'application/pdf' ? '📄' : '📎'}
+                                                                {f.fileName || f.name}
+                                                            </a>
+                                                            {/* Download link */}
+                                                            <a
+                                                                href={f.downloadUrl || f.url}
+                                                                download
+                                                                className="text-xs text-neutral-400 hover:text-neutral-600"
+                                                                title="Download"
+                                                            >
+                                                                ⬇️
+                                                            </a>
+                                                        </div>
+                                                    ));
+                                                }
+
+                                                // Handle single file (like profilePicture)
+                                                return (
+                                                    <div key={key} className="flex items-center gap-1">
+                                                        <a
+                                                            href={file.viewUrl || file.url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="flex items-center gap-1 text-xs bg-neutral-100 px-2 py-1 rounded hover:bg-neutral-200 transition"
+                                                        >
+                                                            {file.type?.startsWith('image/') ? '🖼️' : file.type === 'application/pdf' ? '📄' : '📎'}
+                                                            {file.fileName || file.name}
+                                                        </a>
+                                                        <a
+                                                            href={file.downloadUrl || file.url}
+                                                            download
+                                                            className="text-xs text-neutral-400 hover:text-neutral-600"
+                                                            title="Download"
+                                                        >
+                                                            ⬇️
+                                                        </a>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+
+                    {pagination && (
+                        <Pagination
+                            currentPage={pagination.page}
+                            totalPages={pagination.totalPages}
+                            hasNext={pagination.hasNext}
+                            hasPrev={pagination.hasPrev}
+                            onPageChangeAction={handlePageChange}
+                        />
+                    )}
+                </>
             )}
         </main>
-    )
+    );
 }

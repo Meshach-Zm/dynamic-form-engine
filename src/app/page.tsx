@@ -1,35 +1,36 @@
+// app/page.tsx
+// Dashboard — stat grid + forms list + activity feed.
+
 import { getForms } from '@/lib/api'
 import { computeStats, deriveActivity } from '@/lib/dashboard'
-import { NavBar } from '@/components/dashboard/NavBar'
-import { HeroSection } from '@/components/dashboard/HeroSection'
-import { StatsGrid } from '@/components/dashboard/StatsGrid'
 import { FormList } from '@/components/dashboard/FormList'
 import { ActivityFeed } from '@/components/dashboard/ActivityFeed'
 
-export default async function HomePage() {
+export default async function DashboardPage() {
   const forms = await getForms()
   const stats = computeStats(forms)
   const activity = deriveActivity(forms)
 
   return (
-    <>
-      <NavBar />
-      <HeroSection />
-
-      <main className="mx-auto max-w-7xl px-6 py-10">
-        <StatsGrid stats={stats} />
-
-        <p className="mt-12 mb-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-500">
-          Your forms
+    <div className="mx-auto max-w-7xl px-6 py-10">
+      <div className="mb-8 border-b border-black/10 pb-6">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-500">
+          Overview
         </p>
-        <FormList forms={forms} />
+        <h1 className="mt-2 text-xl font-black uppercase tracking-[0.06em]">
+          Dashboard
+        </h1>
+      </div>
 
-        <p className="mt-12 mb-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-500">
-          Recent activity
-        </p>
+      <p className="mt-10 mb-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-500">
+        Your forms
+      </p>
+      <FormList forms={forms} />
 
-        <ActivityFeed items={activity} />
-      </main>
-    </>
+      <p className="mt-10 mb-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-500">
+        Recent activity
+      </p>
+      <ActivityFeed items={activity} />
+    </div>
   )
 }

@@ -3,52 +3,40 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  // url and directUrl are now configured in prisma.config.ts
 }
-// A named form (e.g. "Volunteer Registration Form").
-// A form can have many versions; only one is "latest" at a time.
+
 model FormTemplate {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  versions FormVersion[]
+  id        String        @id @default(cuid())
+  name      String        @unique
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  versions  FormVersion[]
 }
 
-// An immutable snapshot of a form's JSON Schema at a point in time.
-// Never mutate a version after creation — submissions reference it permanently.
 model FormVersion {
-  id            String   @id @default(cuid())
-  versionNumber Int
-  // JSON Schema draft-07 stored as JSONB in Postgres.
-  // AJV will validate submissions against this at runtime.
-  schema        Json
-  isLatest      Boolean  @default(false)
-  createdAt     DateTime @default(now())
-
+  id             String       @id @default(cuid())
+  versionNumber  Int
+  schema         Json
+  isLatest       Boolean      @default(false)
+  createdAt      DateTime     @default(now())
   formTemplateId String
   formTemplate   FormTemplate @relation(fields: [formTemplateId], references: [id], onDelete: Cascade)
+  submissions    Submission[]
 
-  submissions Submission[]
-
-  // Prevent duplicate version numbers within a template
   @@unique([formTemplateId, versionNumber])
   @@index([formTemplateId, isLatest])
 }
 
-// A user's submitted response, pinned to the exact version it was validated against.
-// Immutable after creation — historical integrity depends on it.
 model Submission {
-  id        String   @id @default(cuid())
-  // The raw user payload, stored as JSONB.
-  payload   Json
-  createdAt DateTime @default(now())
-
+  id            String      @id @default(cuid())
+  payload       Json
+  files         Json?
+  createdAt     DateTime    @default(now())
   formVersionId String
   formVersion   FormVersion @relation(fields: [formVersionId], references: [id], onDelete: Restrict)
 
   @@index([formVersionId])
+  @@index([formVersionId, createdAt(sort: Desc)])
 }

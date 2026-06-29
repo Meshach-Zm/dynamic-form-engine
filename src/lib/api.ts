@@ -1,37 +1,28 @@
-import { prisma } from '@/lib/prisma'
-import type { FormTemplate } from '@/types/form'
+import type { FormTemplate } from '@/types/form';
 
 export async function getForms(): Promise<FormTemplate[]> {
-    const rows = await prisma.formTemplate.findMany({
-        orderBy: { createdAt: 'desc' },
-        include: {
-            versions: {
-                where: { isLatest: true },
-                take: 1,
-                include: {
-                    _count: { select: { submissions: true } },
-                },
-            },
-        },
-    })
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
-    return rows.map(row => {
-        const latest = row.versions[0] ?? null
-        return {
-            id: row.id,
-            name: row.name,
-            status: (latest?.isLatest ? 'live' : 'draft') as 'live' | 'draft',
-            latestVersion: latest
-                ? {
-                    id: latest.id,
-                    versionNumber: latest.versionNumber,
-                    isLatest: latest.isLatest,
-                    createdAt: latest.createdAt.toISOString(),
-                }
-                : null,
-            submissionCount: latest?._count.submissions ?? 0,
-            createdAt: row.createdAt.toISOString(),
-            updatedAt: row.updatedAt.toISOString(),
+    try {
+        const res = await fetch(`${baseUrl}/api/forms?page=1&limit=100`, {
+            cache: 'no-store',
+        });
+
+        if (!res.ok) {
+            console.error('Failed to fetch forms:', res.status);
+            return [];
         }
-    })
+
+        const json = await res.json();
+
+        // Handle both array and paginated responses
+        if (json.data && Array.isArray(json.data)) {
+            return json.data;
+        }
+
+        return [];
+    } catch (error) {
+        console.error('Error fetching forms:', error);
+        return [];
+    }
 }

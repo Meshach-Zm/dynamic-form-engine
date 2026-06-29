@@ -1,62 +1,58 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// FILE: lib/dashboard.ts
+//
+// computeStats and deriveActivity now operate on FormTemplate[] (versions[])
+// instead of the old shape (status / latestVersion / submissionCount).
+// ─────────────────────────────────────────────────────────────────────────────
+
 import type {
     FormTemplate,
     DashboardStats,
     ActivityItem,
 } from '@/types/form'
 
-export function computeStats(
-    forms: FormTemplate[],
-): DashboardStats {
+export function computeStats(forms: FormTemplate[]): DashboardStats {
+    const allVersions = forms.flatMap(f => f.versions)
+
     return {
-        activeForms: forms.filter(
-            f => f.status === 'live',
-        ).length,
-
-        totalSubmissions: forms.reduce(
-            (sum, f) => sum + f.submissionCount,
-            0,
-        ),
-
-        latestVersion: Math.max(
-            0,
-            ...forms.map(
-                f =>
-                    f.latestVersion?.versionNumber ??
-                    0,
-            ),
-        ),
+        totalForms: forms.length,
+        // GET /api/forms does not include submission counts (no _count in the
+        // repository query). Keep as 0 until the API adds it.
+        totalSubmissions: 0,
+        latestVersion:
+            allVersions.length > 0
+                ? Math.max(...allVersions.map(v => v.versionNumber))
+                : 0,
     }
 }
 
-export function deriveActivity(
-    forms: FormTemplate[],
-): ActivityItem[] {
-    return forms
-        .flatMap((form): ActivityItem[] => {
-            if (!form.latestVersion) return []
+export function deriveActivity(forms: FormTemplate[]): ActivityItem[] {
+    const items: ActivityItem[] = []
 
-            const type: ActivityItem['type'] =
-                form.latestVersion.versionNumber === 1
-                    ? 'form_created'
-                    : 'version_published'
+    for (const form of forms) {
+        const sorted = [...form.versions].sort(
+            (a, b) => a.versionNumber - b.versionNumber,
+        )
 
-            return [
-                {
-                    id: `v-${form.latestVersion.id}`,
-                    type,
-                    formName: form.name,
-                    versionNumber:
-                        form.latestVersion.versionNumber,
-                    isDraft:
-                        form.status === 'draft',
-                    timestamp: form.updatedAt,
-                },
-            ]
-        })
+        for (const version of sorted) {
+            items.push({
+                id: `v-${version.id}`,
+                type:
+                    version.versionNumber === 1
+                        ? 'form_created'
+                        : 'version_published',
+                formName: form.name,
+                versionNumber: version.versionNumber,
+                timestamp: version.createdAt,
+            })
+        }
+    }
+
+    return items
         .sort(
             (a, b) =>
                 new Date(b.timestamp).getTime() -
                 new Date(a.timestamp).getTime(),
         )
-        .slice(0, 5)
+        .slice(0, 10)
 }

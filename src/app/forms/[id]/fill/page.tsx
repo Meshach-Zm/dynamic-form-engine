@@ -1,76 +1,104 @@
-import { notFound } from 'next/navigation'
-import { FormRenderer } from '@/components/form-renderer/FormRenderer'
-import type { JsonSchema } from '@/types/form'
+'use client';
 
-interface FormVersion {
-    id: string
-    versionNumber: number
-    schema: JsonSchema
-}
+import { useEffect, useState } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { LoadingPage } from '@/components/ui/LoadingSpinner';
+import FormRenderer from '@/components/form-renderer/FormRenderer';
 
-interface FormTemplate {
-    id: string
-    name: string
-    latestVersion: FormVersion | null
-}
+export default function FillFormPage() {
+  const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const formId = params.id;
+  const versionId = searchParams.get('versionId');
 
-async function getForm(
-    formId: string,
-): Promise<FormTemplate | null> {
-    const base =
-        process.env.NEXT_PUBLIC_BASE_URL ??
-        'http://localhost:3000'
+  const [form, setForm] = useState<any>(null);
+  const [version, setVersion] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-    const res = await fetch(
-        `${base}/api/forms/${formId}`,
-        {
-            cache: 'no-store',
-        },
-    )
+  useEffect(() => {
+    async function fetchForm() {
+      try {
+        // Get form details
+        const formResponse = await fetch(`/api/forms/${formId}`);
+        const formResult = await formResponse.json();
 
-    if (!res.ok) {
-        return null
+        if (!formResult.data) {
+          setError('Form not found');
+          return;
+        }
+        setForm(formResult.data);
+
+        // If versionId is provided, fetch that specific version
+        if (versionId) {
+          const versionResponse = await fetch(`/api/forms/${formId}/versions/${versionId}`);
+          const versionResult = await versionResponse.json();
+
+          if (versionResult.data) {
+            setVersion(versionResult.data.version);
+          } else {
+            setError('Version not found');
+          }
+        } else {
+          // Use latest version
+          const latest = formResult.data.latestVersion;
+          if (latest) {
+            setVersion(latest);
+          } else {
+            setError('No published version of this form');
+          }
+        }
+      } catch (err) {
+        setError('Failed to load form');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
     }
 
-    const json = await res.json()
+    fetchForm();
+  }, [formId, versionId]);
 
-    return json.data
-}
+  if (loading) return <LoadingPage />;
 
-export default async function FillFormPage({
-    params,
-}: {
-    params: Promise<{ id: string }>
-}) {
-    const { id } = await params
-
-    const form = await getForm(id)
-
-    if (!form || !form.latestVersion) {
-        notFound()
-    }
-
+  if (error || !version) {
     return (
-        <main className="mx-auto max-w-4xl px-6 py-10">
-            <header className="mb-8 border-b border-black/10 pb-8">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-500">
-                    Dynamic Form
-                </p>
+      <main className="mx-auto max-w-3xl px-6 py-10">
+        <div className="border border-red-200 bg-red-50 p-6 text-red-700">
+          <p className="font-medium">Error</p>
+          <p className="text-sm">{error || 'Form not available'}</p>
+          <Link
+            href={`/forms/${formId}`}
+            className="mt-4 inline-block text-sm text-red-700 underline"
+          >
+            Back to form
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
-                <h1 className="mt-3 text-3xl font-black uppercase leading-[0.95] tracking-[0.08em] md:text-4xl">
-                    {form.name}
-                </h1>
+  const versionLabel = versionId ? `Version ${version.versionNumber}` : 'Latest Version';
 
-                <p className="mt-3 text-sm text-neutral-600">
-                    Version {form.latestVersion.versionNumber}
-                </p>
-            </header>
+  return (
+    <main className="mx-auto max-w-3xl px-6 py-10">
+      <Link
+        href={`/forms/${formId}`}
+        className="inline-flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-900"
+      >
+        <span>Back</span> to {form?.name || 'Form'}
+      </Link>
 
-            <FormRenderer
-                schema={form.latestVersion.schema}
-                formVersionId={form.latestVersion.id}
-                formName={form.name}
-            />
-        </main>
-    )
+      <div className="mt-4">
+        <p className="text-sm text-neutral-500 mb-2">{versionLabel}</p>
+        <FormRenderer
+          schema={version.schema}
+          formVersionId={version.id}
+          formName={form?.name || 'Form'}
+          formId={formId}
+        />
+      </div>
+    </main>
+  );
 }

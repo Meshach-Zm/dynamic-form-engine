@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
+// ✅ REMOVED $schema
 const STARTER_SCHEMA = JSON.stringify(
   {
     type: 'object',
@@ -13,12 +13,12 @@ const STARTER_SCHEMA = JSON.stringify(
       fullName: {
         type: 'string',
         minLength: 2,
-        description: 'Full name',
+        description: 'Full name'
       },
       email: {
         type: 'string',
         format: 'email',
-        description: 'Email address',
+        description: 'Email address'
       },
     },
   },
@@ -28,7 +28,6 @@ const STARTER_SCHEMA = JSON.stringify(
 
 export default function NewFormPage() {
   const router = useRouter()
-
   const [name, setName] = useState('')
   const [schema, setSchema] = useState(STARTER_SCHEMA)
   const [error, setError] = useState('')
@@ -36,9 +35,7 @@ export default function NewFormPage() {
 
   const submit = async () => {
     setError('')
-
     let parsed
-
     try {
       parsed = JSON.parse(schema)
     } catch {
@@ -47,26 +44,14 @@ export default function NewFormPage() {
     }
 
     setLoading(true)
-
     try {
       const res = await fetch('/api/forms', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name,
-          schema: parsed,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, schema: parsed }),
       })
-
       const json = await res.json()
-
-      if (!res.ok) {
-        setError(json.error ?? 'Failed.')
-        return
-      }
-
+      if (!res.ok) { setError(json.error ?? 'Failed.'); return }
       router.push('/forms')
     } catch {
       setError('Network error.')
@@ -78,24 +63,12 @@ export default function NewFormPage() {
   return (
     <main className="mx-auto max-w-4xl px-6 py-10">
       <header className="border-b border-black/10 pb-8">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-500">
-              Form Builder
-            </p>
-
-            <h1 className="mt-3 text-3xl font-black uppercase leading-[0.95] tracking-[0.08em] md:text-4xl">
-              New Form
-            </h1>
-          </div>
-
-          <Link
-            href="/forms"
-            className="border border-black/10 px-4 py-3 text-sm font-medium transition hover:border-black"
-          >
-            Cancel
-          </Link>
-        </div>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-500">
+          Form Builder
+        </p>
+        <h1 className="mt-3 text-3xl font-black uppercase leading-[0.95] tracking-[0.08em] md:text-4xl">
+          New Form
+        </h1>
       </header>
 
       <section className="mt-8 border border-black/10 bg-white p-8">
@@ -105,10 +78,8 @@ export default function NewFormPage() {
               htmlFor="name"
               className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-500"
             >
-              Form Name
-              <span className="ml-1 text-black">*</span>
+              Form Name <span className="text-black">*</span>
             </label>
-
             <input
               id="name"
               value={name}
@@ -123,10 +94,8 @@ export default function NewFormPage() {
               htmlFor="schema"
               className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-500"
             >
-              JSON Schema
-              <span className="ml-1 text-black">*</span>
+              JSON Schema <span className="text-black">*</span>
             </label>
-
             <textarea
               id="schema"
               rows={18}
@@ -135,24 +104,17 @@ export default function NewFormPage() {
               spellCheck={false}
               className="min-h-[420px] w-full resize-y border border-black/10 px-4 py-3 font-mono text-sm outline-none transition focus:border-black"
             />
-
             <p className="mt-2 text-sm text-neutral-500">
               Fields render from{' '}
-              <code className="border border-black/10 px-1 py-0.5 font-mono text-xs">
-                properties
-              </code>
-              . Use{' '}
-              <code className="border border-black/10 px-1 py-0.5 font-mono text-xs">
-                description
-              </code>{' '}
+              <code className="border border-black/10 px-1 py-0.5 font-mono text-xs">properties</code>.
+              Use{' '}
+              <code className="border border-black/10 px-1 py-0.5 font-mono text-xs">description</code>{' '}
               as the label.
             </p>
           </div>
 
           {error && (
-            <div className="border border-black px-4 py-3 text-sm">
-              {error}
-            </div>
+            <div className="border border-black px-4 py-3 text-sm">{error}</div>
           )}
 
           <div className="border-t border-black/10 pt-6">
@@ -161,7 +123,7 @@ export default function NewFormPage() {
               disabled={loading || !name.trim()}
               className="bg-black px-8 py-4 text-sm font-semibold text-white disabled:bg-neutral-200 disabled:text-neutral-500"
             >
-              {loading ? 'Creating...' : 'Create Form'}
+              {loading ? 'Creating…' : 'Create Form'}
             </button>
           </div>
         </div>

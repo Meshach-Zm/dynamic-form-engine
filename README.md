@@ -11,6 +11,8 @@ A full-stack engine for creating, versioning, and submitting dynamic forms — b
 ![Tailwind](https://img.shields.io/badge/Tailwind-CSS-38BDF8?logo=tailwindcss)
 ![Vitest](https://img.shields.io/badge/Vitest-28%20tests-6E9F18?logo=vitest)
 
+🌐 **Live Demo:** [https://zm-dynamic-form-engine.netlify.app](https://zm-dynamic-form-engine.netlify.app)
+
 ---
 
 ## ⚡ Quick Start
@@ -98,88 +100,12 @@ Visit [http://localhost:3000](http://localhost:3000)
 
 ```
 src/
-  app/
-    api/forms/
-      [id]/
-        route.ts
-        submissions/route.ts
-        versions/
-          [versionId]/
-            route.ts
-            submissions/route.ts
-          route.ts
-      route.ts
-    forms/
-      [id]/
-        fill/page.tsx
-        page.tsx
-        submissions/page.tsx
-        versions/
-          [versionId]/page.tsx
-      versions/
-        [versionId]/
-          submissions/page.tsx
-      new/page.tsx
-      page.tsx
-    globals.css
-    layout.tsx
-    not-found.tsx
-    page.tsx
-
-  components/
-    dashboard/
-      ActivityFeed.tsx
-      FormCard.tsx
-      FormList.tsx
-      HeroSection.tsx
-      NavBar.tsx
-      StatsGrid.tsx
-    form-renderer/
-      FormRenderer.tsx
-    shell/
-      SideBar.tsx
-    ui/
-      LoadingSpinner.tsx
-      Pagination.tsx
-
-  lib/
-    ajv.ts
-    api.ts
-    cloudinary.ts
-    dashboard.ts
-    date.ts
-    fetcher.ts
-    hooks/
-      useForms.ts
-    prisma.ts
-
-  modules/
-    form-template/
-      form-template.repository.ts
-      form-template.service.ts
-      form-template.types.ts
-    submission/
-      submission.repository.ts
-      submission.service.ts
-      submission.types.ts
-    validation/
-      validation.service.ts
-
-  tests/
-    integration/api/
-      connection.test.ts
-      forms.test.ts
-      submissions.test.ts
-    setup/
-      test-setup.ts
-      vitest-setup.ts
-    unit/
-      validation.service.test.ts
-      version-immutability.test.ts
-
-  types/
-    form.ts
-    index.ts
+  app/          # Next.js App Router pages and API routes
+  components/   # Reusable UI components (dashboard, form renderer, shell)
+  lib/          # Shared utilities, hooks, and third-party client config
+  modules/      # Feature modules: form-template, submission, validation
+  tests/        # Unit and integration tests
+  types/        # Shared TypeScript type definitions
 ```
 
 ---

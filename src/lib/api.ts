@@ -1,9 +1,10 @@
 import type { FormTemplate } from '@/types/form';
 
 export async function getForms(): Promise<FormTemplate[]> {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+
     try {
-        // ✅ Relative URL works everywhere
-        const res = await fetch('/api/forms?page=1&limit=100', {
+        const res = await fetch(`${baseUrl}/api/forms?page=1&limit=100`, {
             cache: 'no-store',
         });
 
@@ -14,6 +15,7 @@ export async function getForms(): Promise<FormTemplate[]> {
 
         const json = await res.json();
 
+        // Handle both array and paginated responses
         if (json.data && Array.isArray(json.data)) {
             return json.data;
         }

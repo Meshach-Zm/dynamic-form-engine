@@ -1,108 +1,16 @@
-'use client';
+import { Suspense } from 'react';
+import FillFormContent from './FillFormContent';
 
-export const dynamic = 'force-dynamic';
-
-
-
-import { useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { LoadingPage } from '@/components/ui/LoadingSpinner';
-import FormRenderer from '@/components/form-renderer/FormRenderer';
-
-export default function FillFormPage() {
-  const params = useParams<{ id: string }>();
-  const searchParams = useSearchParams();
-  const formId = params.id;
-  const versionId = searchParams.get('versionId');
-
-  const [form, setForm] = useState<any>(null);
-  const [version, setVersion] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function fetchForm() {
-      try {
-        // Get form details
-        const formResponse = await fetch(`/api/forms/${formId}`);
-        const formResult = await formResponse.json();
-
-        if (!formResult.data) {
-          setError('Form not found');
-          return;
-        }
-        setForm(formResult.data);
-
-        // If versionId is provided, fetch that specific version
-        if (versionId) {
-          const versionResponse = await fetch(`/api/forms/${formId}/versions/${versionId}`);
-          const versionResult = await versionResponse.json();
-
-          if (versionResult.data) {
-            setVersion(versionResult.data.version);
-          } else {
-            setError('Version not found');
-          }
-        } else {
-          // Use latest version
-          const latest = formResult.data.latestVersion;
-          if (latest) {
-            setVersion(latest);
-          } else {
-            setError('No published version of this form');
-          }
-        }
-      } catch (err) {
-        setError('Failed to load form');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchForm();
-  }, [formId, versionId]);
-
-  if (loading) return <LoadingPage />;
-
-  if (error || !version) {
-    return (
-      <main className="mx-auto max-w-3xl px-6 py-10">
-        <div className="border border-red-200 bg-red-50 p-6 text-red-700">
-          <p className="font-medium">Error</p>
-          <p className="text-sm">{error || 'Form not available'}</p>
-          <Link
-            href={`/forms/${formId}`}
-            className="mt-4 inline-block text-sm text-red-700 underline"
-          >
-            Back to form
-          </Link>
-        </div>
-      </main>
-    );
-  }
-
-  const versionLabel = versionId ? `Version ${version.versionNumber}` : 'Latest Version';
+export default async function FillFormPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-10">
-      <Link
-        href={`/forms/${formId}`}
-        className="inline-flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-900"
-      >
-        <span>Back</span> to {form?.name || 'Form'}
-      </Link>
-
-      <div className="mt-4">
-        <p className="text-sm text-neutral-500 mb-2">{versionLabel}</p>
-        <FormRenderer
-          schema={version.schema}
-          formVersionId={version.id}
-          formName={form?.name || 'Form'}
-          formId={formId}
-        />
-      </div>
-    </main>
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <FillFormContent formId={id} />
+    </Suspense>
   );
 }
